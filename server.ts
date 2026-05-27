@@ -111,7 +111,9 @@ function requireAdmin(req: express.Request, res: express.Response, next: express
   }
 
   const token = authHeader.split(' ')[1];
-  if (token !== ADMIN_PASSWORD) {
+  const db = readDB();
+  const currentPassword = db.adminPassword || ADMIN_PASSWORD;
+  if (token !== currentPassword) {
     res.status(403).json({ error: 'Akses ditolak: Password Admin salah.' });
     return;
   }
@@ -155,11 +157,43 @@ app.post('/api/auth/login', (req, res) => {
     return;
   }
 
-  if (password === ADMIN_PASSWORD) {
-    res.json({ success: true, token: ADMIN_PASSWORD });
+  const db = readDB();
+  const currentPassword = db.adminPassword || ADMIN_PASSWORD;
+
+  if (password === currentPassword) {
+    res.json({ success: true, token: currentPassword });
   } else {
     res.status(400).json({ error: 'Password Admin tidak valid.' });
   }
+});
+
+// Admin Password Update API (Guarded)
+app.post('/api/auth/change-password', requireAdmin, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: 'Password lama dan password baru wajib diisi.' });
+    return;
+  }
+
+  const db = readDB();
+  const currentStored = db.adminPassword || ADMIN_PASSWORD;
+
+  if (currentPassword !== currentStored) {
+    res.status(400).json({ error: 'Password ustadz saat ini tidak sesuai.' });
+    return;
+  }
+
+  const cleanNewPass = newPassword.trim();
+  if (cleanNewPass.length < 4) {
+    res.status(400).json({ error: 'Password baru minimal berdurasi 4 karakter.' });
+    return;
+  }
+
+  db.adminPassword = cleanNewPass;
+  writeDB(db);
+
+  res.json({ success: true, token: cleanNewPass });
 });
 
 // Guest (Wali Santri): Public Search by Name & Wali Name

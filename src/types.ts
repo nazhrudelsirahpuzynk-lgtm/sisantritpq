@@ -29,4 +29,5 @@ export interface Nilai {
 export interface DatabaseState {
   santri: Santri[];
   nilai: Nilai[];
+  adminPassword?: string;
 }

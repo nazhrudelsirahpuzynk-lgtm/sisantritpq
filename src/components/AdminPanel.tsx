@@ -90,6 +90,14 @@ export default function AdminPanel({ onNotify }: AdminPanelProps) {
   const [parsedStudents, setParsedStudents] = useState<any[]>([]);
   const [excelErrors, setExcelErrors] = useState<string[]>([]);
 
+  // Password change states
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordsForm, setPasswordsForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmNewPassword: ''
+  });
+
   // Hydrate Token on start
   useEffect(() => {
     const savedToken = localStorage.getItem('tpq_admin_token');
@@ -172,6 +180,50 @@ export default function AdminPanel({ onNotify }: AdminPanelProps) {
     setSantriList([]);
     setNilaiList([]);
     onNotify('Berhasil keluar dari sesi administrasi.', 'success');
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordsForm.newPassword !== passwordsForm.confirmNewPassword) {
+      onNotify('Konfirmasi kata sandi baru tidak sesuai.', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordsForm.currentPassword,
+          newPassword: passwordsForm.newPassword
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Gagal memperbarui kata sandi.');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('tpq_admin_token', data.token);
+      setToken(data.token);
+
+      onNotify('Alhamdulillah, kata sandi ustadz/administrator berhasil diubah!', 'success');
+      setIsPasswordModalOpen(false);
+      setPasswordsForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmNewPassword: ''
+      });
+    } catch (err: any) {
+      onNotify(err.message || 'Gagal memperbarui kata sandi keamanan.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ==================== SANTRI OPERATION HANDLERS ====================
@@ -615,6 +667,20 @@ export default function AdminPanel({ onNotify }: AdminPanelProps) {
             }`}
           >
             Log Evaluasi Nilai ({nilaiList.length})
+          </button>
+          <button
+            onClick={() => {
+              setPasswordsForm({
+                currentPassword: '',
+                newPassword: '',
+                confirmNewPassword: ''
+              });
+              setIsPasswordModalOpen(true);
+            }}
+            className="p-1.5 bg-slate-50 hover:bg-slate-100 text-emerald-600 border border-slate-200 rounded-lg cursor-pointer transition-colors"
+            title="Ganti Kata Sandi Keamanan"
+          >
+            <Lock className="w-4 h-4" />
           </button>
           <button
             onClick={handleLogout}
@@ -1346,6 +1412,86 @@ export default function AdminPanel({ onNotify }: AdminPanelProps) {
                 {loading ? 'Menyimpan Kolektif...' : 'Simpan Data Kolektif'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================== MODAL: CHANGE ADMIN PASSWORD ===================== */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white border rounded-2xl w-full max-w-md overflow-hidden shadow-xl animate-scaleIn">
+            <div className="bg-emerald-600 px-6 py-4 flex items-center justify-between text-white">
+              <div className="flex items-center gap-2">
+                <Lock className="w-5 h-5 flex-shrink-0" />
+                <h3 className="font-bold text-base">Ganti Kata Sandi Keamanan</h3>
+              </div>
+              <button 
+                onClick={() => setIsPasswordModalOpen(false)}
+                className="hover:bg-emerald-500/80 p-1.5 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-4 p-6 text-left">
+              <p className="text-xs text-slate-500 leading-relaxed font-semibold">
+                Silakan isi formulir di bawah ini untuk mengganti kata sandi penataran atau administrasi guru. Pastikan password baru mudah diingat.
+              </p>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">Kata Sandi Saat Ini</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Masukkan kata sandi lama..."
+                  value={passwordsForm.currentPassword}
+                  onChange={(e) => setPasswordsForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700 font-semibold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">Kata Sandi Baru</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Min. 4 karakter..."
+                  value={passwordsForm.newPassword}
+                  onChange={(e) => setPasswordsForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700 font-semibold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">Konfirmasi Kata Sandi Baru</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Masukkan ulang kata sandi baru..."
+                  value={passwordsForm.confirmNewPassword}
+                  onChange={(e) => setPasswordsForm(prev => ({ ...prev, confirmNewPassword: e.target.value }))}
+                  className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700 font-semibold"
+                />
+              </div>
+
+              <div className="bg-slate-50 -mx-6 -mb-6 px-6 py-4 flex gap-3 justify-end border-t border-slate-100 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 rounded-xl font-bold text-xs cursor-pointer transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors shadow-md shadow-emerald-600/10"
+                >
+                  <Save className="w-4 h-4" />
+                  {loading ? 'Menyimpan...' : 'Perbarui Password'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
