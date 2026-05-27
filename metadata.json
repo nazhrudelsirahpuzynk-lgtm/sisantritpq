@@ -1,0 +1,6 @@
+{
+  "name": "SI-SANTRI TPQ AL ASYHAR SIMA",
+  "description": "Sistem Informasi Evaluasi Belajar Santri Taman Pendidikan Al-Qur'an (TPQ). Menampilkan grafik perkembangan, input nilai guru (admin), jilid 1-5, Al-Qur'an 1-2, dan ekspor cetak rapor PDF.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
